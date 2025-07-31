@@ -129,7 +129,7 @@ def strip_isotopes(smiles):
         atom.SetIsotope(0)
     return Chem.MolToSmiles(mol, isomericSmiles=True)
 
-metal_disconnector = Standardizer().disconnect_metals
+metal_disconnector = MolVSStandardizer().disconnect_metals
 
 def disconnect_metals_from_smiles(smiles):
     mol = Chem.MolFromSmiles(smiles)
