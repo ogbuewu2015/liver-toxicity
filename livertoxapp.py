@@ -13,17 +13,6 @@ from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 #importing the cheminformatics module needed
 import molvs
-# Imbalanced-learn classifiers and ensembles
-from imblearn.ensemble import EasyEnsembleClassifier, BalancedBaggingClassifier
-
-# XGBoost classifier
-from xgboost import XGBClassifier
-
-# CatBoost classifier
-from catboost import CatBoostClassifier
-
-# Scikit-learn ensemble
-from sklearn.ensemble import ExtraTreesClassifier
 
 import matplotlib.pyplot as plt
 from preprocessing_mito import scale_new_data
@@ -34,6 +23,8 @@ from rdkit.Chem import Descriptors
 from rdkit.ML.Descriptors import MoleculeDescriptors
 from rdkit.Chem import rdMolDescriptors
 from tqdm import tqdm
+from rdkit.Chem.Draw import IPythonConsole
+IPythonConsole.drawOptions.comicMode=True
 import rdkit    
 from Mold2_pywrapper import Mold2
 import streamlit as st
@@ -56,19 +47,19 @@ from molvs import Standardizer as MolVSStandardizer
 from kpca_utils_car import split_columns, fit_kernel_pca, transform_with_kernel_pca, concat_transformed_with_nonfloat
 from kpca_utils_mito import split_columns, fit_kernel_pca, transform_with_kernel_pca, concat_transformed_with_nonfloat
 
-
-with open('car_model.pkl', 'rb') as f:
+with open('car_model.pkl', as 'rb') as f:
     car_model = pickle.load(f)
 
-with open('mito_model.pkl', 'rb') as f:
+with open('mito_model.pkl', as 'rb') as f:
     mito_model = pickle.load(f)
-
-with open('calibrated_car_model.pkl', 'rb') as f:
+    
+    
+with open('calibrated_car_model.pkl', as 'rb') as f:
     cal_car_model = pickle.load(f)
-
-with open('calibrated_mito_model.pkl', 'rb') as f:
+    
+    
+with open('calibrated_mito_model.pkl', as 'rb') as f:
     cal_mito_model = pickle.load(f)
-
 
 kpca_model_car = joblib.load("kpca_model_car.pkl")
 kpca_model_mito = joblib.load("kpca_model_mito.pkl")
@@ -140,7 +131,7 @@ def strip_isotopes(smiles):
         atom.SetIsotope(0)
     return Chem.MolToSmiles(mol, isomericSmiles=True)
 
-metal_disconnector = MolVSStandardizer().disconnect_metals
+metal_disconnector = Standardizer().disconnect_metals
 
 def disconnect_metals_from_smiles(smiles):
     mol = Chem.MolFromSmiles(smiles)
@@ -432,12 +423,22 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
 def plot_pca_subplots(train_df_1, dili_df_1,
                       train_df_2, dili_df_2,
                       title1="Subplot 1", title2="Subplot 2"):
     """
-    Plots two subplots showing PCA_1 vs PCA_2 for two dataset pairs and returns the figure.
+    Plots two subplots showing PCA_1 vs PCA_2 for two dataset pairs.
+
+    Parameters:
+    - train_df_1: DataFrame with PCA_1 and PCA_2 columns (e.g., X_train_vis_mito)
+    - dili_df_1: DataFrame with PCA_1 and PCA_2 columns (e.g., X_DILI_train_vis_mito)
+    - train_df_2: DataFrame with PCA_1 and PCA_2 columns (e.g., X_train_vis_car)
+    - dili_df_2: DataFrame with PCA_1 and PCA_2 columns (e.g., X_DILI_train_vis_car)
+    - title1: str, title for the first subplot
+    - title2: str, title for the second subplot
     """
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
 
     # Subplot 1 (e.g., Mito)
@@ -457,7 +458,7 @@ def plot_pca_subplots(train_df_1, dili_df_1,
     ax2.legend()
 
     plt.tight_layout()
-    return fig
+    plt.show()
 
 
     
@@ -473,15 +474,12 @@ X_DILI_train_vis_car = pd.read_csv('X_DILI_train_vis_car.csv')
 
 
     
-
-
-fig = plot_pca_subplots(
+plot_pca_subplots(
     X_train_vis_mito, X_DILI_train_vis_mito,
     X_train_vis_car, X_DILI_train_vis_car,
-    title1="Mitotox Train Data vs DILI Train Data", 
-    title2="CAR Antagonist Train Data vs DILI Train Data"
+    title1="Mitotox Train Data vs DILI Train Data", title2="CAR Antagonist Train Data vs DILI Train Data"
 )
-st.pyplot(fig)
+
 
 
 
@@ -504,74 +502,73 @@ if one_or_few_SMILES != "['CCO']":
         smiles_list = ast.literal_eval(one_or_few_SMILES)
         df = pd.DataFrame(smiles_list, columns=['smiles'])
 
-        # Step 1: Remove heavy metals
-        df = remove_heavy_metals(df)
-        if df.empty:
-            st.error("❌ All input SMILES contain heavy metals.")
-            st.stop()
-        st.success("✅ Heavy metals filtered.")
-
-        # Step 2: Strip isotopes
-        df['smiles'] = df['smiles'].apply(strip_isotopes)
-        st.success("✅ Isotopes stripped.")
-
-        # Step 3: Disconnect metals
-        df['smiles'] = df['smiles'].apply(disconnect_metals_from_smiles)
-        st.success("✅ Metals disconnected.")
-
-        # Step 4: Remove solvents
-        df['smiles'] = df['smiles'].apply(lambda s: remove_solvents(s, solvent_mols))
-        df.dropna(subset=['smiles'], inplace=True)
-        if df.empty:
-            st.error("❌ All input SMILES removed after solvent filtering.")
-            st.stop()
-        st.success("✅ Solvents removed.")
-
-        # Step 5: Remove salts and sanitize
-        df['smiles'] = df['smiles'].apply(remove_salts_and_sanitize)
-        df.dropna(subset=['smiles'], inplace=True)
-        st.success("✅ Salts removed and SMILES sanitized.")
-
-        # Step 6: Check for disconnected components
-        disconnected = df['smiles'].apply(check_disconnected_smiles)
-        if disconnected.any():
-            st.error("❌ Some input SMILES contain disconnected components (mixtures). Please provide single-component compounds.")
-            st.stop()
-        st.success("✅ No disconnected components found.")
-
-        # Step 7: Canonicalize SMILES
-        df['smiles'] = df['smiles'].apply(canonical)
-        st.success("✅ Input SMILES canonicalized.")
-
-        # Step 8: Filter by number of carbons and molecular weight
-        valid_mask = df['smiles'].apply(lambda s: s is not None and is_valid_smiles(s))
-        if not valid_mask.all():
-            invalid_smiles = df.loc[~valid_mask, 'smiles']
-            for smi in invalid_smiles:
-                mol = Chem.MolFromSmiles(smi)
-                if mol is None:
-                    st.error(f"❌ Invalid SMILES: {smi}")
+         # Step 1: Remove heavy metals
+                df2 = remove_heavy_metals(df2)
+                if df2.empty:
+                    st.error("❌ All uploaded SMILES contain heavy metals.")
                 else:
-                    num_carbons = sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == 'C')
-                    mw = Descriptors.MolWt(mol)
-                    if num_carbons < 4:
-                        st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
-                    if mw > 909:
-                        st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
-            df = df.loc[valid_mask]
-        else:
-            st.success("✅ All input compounds have valid carbon count and molecular weight.")
+                    st.success("✅ Heavy metals filtered.")
 
-        # Step 9: Standardize using MyStandardizer
-        standardized_smiles = Standardizer.standardize_smiles(df['smiles'].tolist())
-        df['smiles'] = standardized_smiles
-        st.success("✅ Input SMILES standardized.")
+                # Step 2: Strip isotopes
+                df2['smiles'] = df2['smiles'].apply(strip_isotopes)
+                st.success("✅ Isotopes stripped.")
 
-        # Step 10: Preprocess molecules (uncharge, tautomer canonicalization)
-        df['smiles'] = df['smiles'].apply(preprocess_molecule)
-        df.dropna(subset=['smiles'], inplace=True)
-        st.success("✅ Input molecules preprocessed (uncharge and tautomer canonicalization).")
+                # Step 3: Disconnect metals
+                df2['smiles'] = df2['smiles'].apply(disconnect_metals_from_smiles)
+                st.success("✅ Metals disconnected.")
 
+                # Step 4: Remove solvents
+                df2['smiles'] = df2['smiles'].apply(lambda s: remove_solvents(s, solvent_mols))
+                df2.dropna(subset=['smiles'], inplace=True)
+                if df2.empty:
+                    st.error("❌ All uploaded SMILES removed after solvent filtering.")
+                else:
+                    st.success("✅ Solvents removed.")
+
+                # Step 5: Remove salts and sanitize
+                df2['smiles'] = df2['smiles'].apply(remove_salts_and_sanitize)
+                df2.dropna(subset=['smiles'], inplace=True)
+                st.success("✅ Salts removed and SMILES sanitized.")
+
+                # Step 6: Check for disconnected components
+                disconnected2 = df2['smiles'].apply(check_disconnected_smiles)
+                if disconnected2.any():
+                    st.error("❌ Some uploaded SMILES contain disconnected components (mixtures). Please provide single-component compounds.")
+                else:
+                    st.success("✅ No disconnected components found.")
+
+                    # Step 7: Canonicalize SMILES
+                    df2['smiles'] = df2['smiles'].apply(canonical)
+                    st.success("✅ Uploaded SMILES canonicalized.")
+
+                    # Step 8: Filter by number of carbons and molecular weight
+                    valid_mask2 = df2['smiles'].apply(lambda s: s is not None and is_valid_smiles(s))
+                    if not valid_mask2.all():
+                        invalid_smiles2 = df2.loc[~valid_mask2, 'smiles']
+                        for smi in invalid_smiles2:
+                            mol = Chem.MolFromSmiles(smi)
+                            if mol is None:
+                                st.error(f"❌ Invalid SMILES: {smi}")
+                            else:
+                                num_carbons = sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == 'C')
+                                mw = Descriptors.MolWt(mol)
+                                if num_carbons < 4:
+                                    st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
+                                if mw > 909:
+                                    st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
+                        df2 = df2.loc[valid_mask2]
+                    else:
+                        st.success("✅ All uploaded compounds have valid carbon count and molecular weight.")
+
+                    # Step 9: Standardize using MyStandardizer
+                    standardized_smiles2 = Standardizer.standardize_smiles(df2['smiles'].tolist())
+                    df2['smiles'] = standardized_smiles2
+                    st.success("✅ Uploaded SMILES standardized.")
+
+                    # Step 10: Preprocess molecules (uncharge, tautomer canonicalization)
+                    df2['smiles'] = df2['smiles'].apply(preprocess_molecule)
+                    df2.dropna(subset=['smiles'], inplace=True)
+                    st.success("✅ Uploaded molecules preprocessed (uncharge and tautomer canonicalization).")
         # Step 12: Generate Mold2 descriptors
         descriptors_df = generate_mold2_descriptors(df['smiles'])
         convert_columns_to_int64(descriptors_df)
@@ -596,8 +593,7 @@ if one_or_few_SMILES != "['CCO']":
         df['MITO_Toxicity_Probability'] = mito_probs
 
         st.success("✅ Cytoxicity probabilities predicted.")
-
-        # Step 16: KernelPCA transformation
+        # Step 15: KernelPCA transformation
         car_float, car_nonfloat = split_columns(selected_car_df)
         mito_float, mito_nonfloat = split_columns(selected_mito_df)
 
@@ -607,39 +603,31 @@ if one_or_few_SMILES != "['CCO']":
         selected_car_data = concat_transformed_with_nonfloat(car_kpca_transformed, car_nonfloat, index=selected_car_df.index)
         selected_mito_data = concat_transformed_with_nonfloat(mito_kpca_transformed, mito_nonfloat, index=selected_mito_df.index)
         st.success("✅ Cytotoxicity data aligned with hepatotoxic data using kernel PCA.")
-
-        # Step 17: Weighted predictions
-        calibrate_mito_data = pd.read_csv(X_DILI_calibrate_mito)
-        calibrate_car_data = pd.read_csv(X_DILI_calibrate_car)
-
-        weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(
-            cal_mito_model, cal_car_model,
-            calibrate_mito_data, calibrate_car_data,
-            logloss_mito=0.293462, logloss_car=0.443863
-        )
-        weighted_test_proba, weighted_test_pred, weights = get_weighted_predictions(
-            cal_mito_model, cal_car_model,
-            selected_mito_data, selected_car_data,
-            logloss_mito=0.293462, logloss_car=0.443863
-        )
-
+        calibrate_mito = pd.read_csv(X_DILI_calibrate_mito.csv)
+        calibrate_car = pd.read_csv(X_DILI_calibrate_mito.car)
+                
+        weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(cal_mito_model, cal_car_model,
+                                                                                                calibrate_mito_data, calibrate_car_data,
+                                                                                                logloss_mito=0.293462, logloss_car=0.443863)
+        weighted_test_proba, weighted_test_pred, weights = get_weighted_predictions(cal_mito_model, cal_car_model,
+                                                                                            selected_mito_data, selected_car_data,
+                                                                                            logloss_mito=0.293462, logloss_car=0.443863)
         df['Weighted_Toxicity_Probability'] = weighted_test_proba
         df['Predicted_Label'] = weighted_test_pred
 
-        # Step 18: Conformal prediction
-        p_values, accepted = compute_conformal_prediction(weighted_calibrate_proba, weighted_test_proba)
+                # Step 18: Conformal prediction
+        p_values, accepted = compute_conformal_prediction(weighted_calibrate_proba, weighted_valid_proba)
         df['Conformal_PValue'] = p_values
         df['Accepted'] = accepted
 
         st.success("✅ Weighted predictions using calibrated models and conformal prediction completed.")
-        st.dataframe(df[['smiles','CAR_Toxicity_Probability', 'MITO_Toxicity_Probability', 'Weighted_Toxicity_Probability',
-                         'Predicted_Label', 'Conformal_PValue', 'Accepted']])
-        output = df[['smiles','CAR_Toxicity_Probability', 'MITO_Toxicity_Probability', 'Weighted_Toxicity_Probability',
-                     'Predicted_Label', 'Conformal_PValue', 'Accepted']]
+        st.dataframe(df2[['smiles','CAR_Toxicity_Probability', 'MITO_Toxicity_Probability', 'Weighted_Toxicity_Probability',
+                                  'Predicted_Label', 'Conformal_PValue', 'Accepted']])
+        output = df2[['smiles','CAR_Toxicity_Probability', 'MITO_Toxicity_Probability', 'Weighted_Toxicity_Probability',
+                                  'Predicted_Label', 'Conformal_PValue', 'Accepted']]
         st.sidebar.markdown('''## See your output in the following table:''')
         st.sidebar.write(output)
         st.sidebar.markdown(file_download(output, "hepatotoxicity_prediction.csv"), unsafe_allow_html=True)
-
     except Exception as e:
         st.error(f"⚠️ Failed to process input: {e}")
 
@@ -650,12 +638,13 @@ elif predict_button:
             if 'smiles' not in df2.columns:
                 st.error("❌ Uploaded CSV must contain a 'smiles' column.")
             else:
-                # Step 1: Remove heavy metals
+                # Step 1-11: Preprocess uploaded SMILES
+                 # Step 1: Remove heavy metals
                 df2 = remove_heavy_metals(df2)
                 if df2.empty:
                     st.error("❌ All uploaded SMILES contain heavy metals.")
-                    st.stop()
-                st.success("✅ Heavy metals filtered.")
+                else:
+                    st.success("✅ Heavy metals filtered.")
 
                 # Step 2: Strip isotopes
                 df2['smiles'] = df2['smiles'].apply(strip_isotopes)
@@ -670,8 +659,8 @@ elif predict_button:
                 df2.dropna(subset=['smiles'], inplace=True)
                 if df2.empty:
                     st.error("❌ All uploaded SMILES removed after solvent filtering.")
-                    st.stop()
-                st.success("✅ Solvents removed.")
+                else:
+                    st.success("✅ Solvents removed.")
 
                 # Step 5: Remove salts and sanitize
                 df2['smiles'] = df2['smiles'].apply(remove_salts_and_sanitize)
@@ -679,44 +668,45 @@ elif predict_button:
                 st.success("✅ Salts removed and SMILES sanitized.")
 
                 # Step 6: Check for disconnected components
-                disconnected = df2['smiles'].apply(check_disconnected_smiles)
-                if disconnected.any():
+                disconnected2 = df2['smiles'].apply(check_disconnected_smiles)
+                if disconnected2.any():
                     st.error("❌ Some uploaded SMILES contain disconnected components (mixtures). Please provide single-component compounds.")
-                    st.stop()
-                st.success("✅ No disconnected components found.")
-
-                # Step 7: Canonicalize SMILES
-                df2['smiles'] = df2['smiles'].apply(canonical)
-                st.success("✅ Uploaded SMILES canonicalized.")
-
-                # Step 8: Filter by number of carbons and molecular weight
-                valid_mask = df2['smiles'].apply(lambda s: s is not None and is_valid_smiles(s))
-                if not valid_mask.all():
-                    invalid_smiles = df2.loc[~valid_mask, 'smiles']
-                    for smi in invalid_smiles:
-                        mol = Chem.MolFromSmiles(smi)
-                        if mol is None:
-                            st.error(f"❌ Invalid SMILES: {smi}")
-                        else:
-                            num_carbons = sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == 'C')
-                            mw = Descriptors.MolWt(mol)
-                            if num_carbons < 4:
-                                st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
-                            if mw > 909:
-                                st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
-                    df2 = df2.loc[valid_mask]
                 else:
-                    st.success("✅ All uploaded compounds have valid carbon count and molecular weight.")
+                    st.success("✅ No disconnected components found.")
 
-                # Step 9: Standardize using MyStandardizer
-                standardized_smiles = Standardizer.standardize_smiles(df2['smiles'].tolist())
-                df2['smiles'] = standardized_smiles
-                st.success("✅ Uploaded SMILES standardized.")
+                    # Step 7: Canonicalize SMILES
+                    df2['smiles'] = df2['smiles'].apply(canonical)
+                    st.success("✅ Uploaded SMILES canonicalized.")
 
-                # Step 10: Preprocess molecules (uncharge, tautomer canonicalization)
-                df2['smiles'] = df2['smiles'].apply(preprocess_molecule)
-                df2.dropna(subset=['smiles'], inplace=True)
-                st.success("✅ Uploaded molecules preprocessed (uncharge and tautomer canonicalization).")
+                    # Step 8: Filter by number of carbons and molecular weight
+                    valid_mask2 = df2['smiles'].apply(lambda s: s is not None and is_valid_smiles(s))
+                    if not valid_mask2.all():
+                        invalid_smiles2 = df2.loc[~valid_mask2, 'smiles']
+                        for smi in invalid_smiles2:
+                            mol = Chem.MolFromSmiles(smi)
+                            if mol is None:
+                                st.error(f"❌ Invalid SMILES: {smi}")
+                            else:
+                                num_carbons = sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == 'C')
+                                mw = Descriptors.MolWt(mol)
+                                if num_carbons < 4:
+                                    st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
+                                if mw > 909:
+                                    st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
+                        df2 = df2.loc[valid_mask2]
+                    else:
+                        st.success("✅ All uploaded compounds have valid carbon count and molecular weight.")
+
+                    # Step 9: Standardize using MyStandardizer
+                    standardized_smiles2 = Standardizer.standardize_smiles(df2['smiles'].tolist())
+                    df2['smiles'] = standardized_smiles2
+                    st.success("✅ Uploaded SMILES standardized.")
+
+                    # Step 10: Preprocess molecules (uncharge, tautomer canonicalization)
+                    df2['smiles'] = df2['smiles'].apply(preprocess_molecule)
+                    df2.dropna(subset=['smiles'], inplace=True)
+                    st.success("✅ Uploaded molecules preprocessed (uncharge and tautomer canonicalization).")
+                df2 = run_full_preprocessing_pipeline(df2, solvent_mols)
 
                 # Step 12: Generate Mold2 descriptors
                 descriptors_df2 = generate_mold2_descriptors(df2['smiles'])
@@ -740,9 +730,9 @@ elif predict_button:
 
                 df2['CAR_Toxicity_Probability'] = car_probs
                 df2['MITO_Toxicity_Probability'] = mito_probs
-                st.success("✅ Class 1 toxicity probabilities predicted.")
 
-                # Step 16: KernelPCA transformation
+                st.success("✅ Class 1 toxicity probabilities predicted.")
+                # Step 15: KernelPCA transformation
                 car_float, car_nonfloat = split_columns(selected_car_df)
                 mito_float, mito_nonfloat = split_columns(selected_mito_df)
 
@@ -752,27 +742,21 @@ elif predict_button:
                 selected_car_data = concat_transformed_with_nonfloat(car_kpca_transformed, car_nonfloat, index=selected_car_df.index)
                 selected_mito_data = concat_transformed_with_nonfloat(mito_kpca_transformed, mito_nonfloat, index=selected_mito_df.index)
                 st.success("✅ Cytotoxicity data aligned with hepatotoxic data using kernel PCA.")
-
-                # Step 17: Weighted predictions
-                calibrate_mito_data = pd.read_csv(X_DILI_calibrate_mito)
-                calibrate_car_data = pd.read_csv(X_DILI_calibrate_car)
-
-                weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(
-                    cal_mito_model, cal_car_model,
-                    calibrate_mito_data, calibrate_car_data,
-                    logloss_mito=0.293462, logloss_car=0.443863
-                )
-                weighted_test_proba, weighted_test_pred, weights = get_weighted_predictions(
-                    cal_mito_model, cal_car_model,
-                    selected_mito_data, selected_car_data,
-                    logloss_mito=0.293462, logloss_car=0.443863
-                )
-
+                
+                calibrate_mito = pd.read_csv(X_DILI_calibrate_mito.csv)
+                calibrate_car = pd.read_csv(X_DILI_calibrate_mito.car)
+                
+                weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(cal_mito_model, cal_car_model,
+                                                                                                calibrate_mito_data, calibrate_car_data,
+                                                                                                logloss_mito=0.293462, logloss_car=0.443863)
+                weighted_test_proba, weighted_test_pred, weights = get_weighted_predictions(cal_mito_model, cal_car_model,
+                                                                                            selected_mito_data, selected_car_data,
+                                                                                            logloss_mito=0.293462, logloss_car=0.443863)
                 df2['Weighted_Toxicity_Probability'] = weighted_test_proba
                 df2['Predicted_Label'] = weighted_test_pred
 
                 # Step 18: Conformal prediction
-                p_values, accepted = compute_conformal_prediction(weighted_calibrate_proba, weighted_test_proba)
+                p_values, accepted = compute_conformal_prediction(weighted_calibrate_proba, weighted_valid_proba)
                 df2['Conformal_PValue'] = p_values
                 df2['Accepted'] = accepted
 
@@ -780,16 +764,16 @@ elif predict_button:
                 st.dataframe(df2[['smiles','CAR_Toxicity_Probability', 'MITO_Toxicity_Probability', 'Weighted_Toxicity_Probability',
                                   'Predicted_Label', 'Conformal_PValue', 'Accepted']])
                 output = df2[['smiles','CAR_Toxicity_Probability', 'MITO_Toxicity_Probability', 'Weighted_Toxicity_Probability',
-                              'Predicted_Label', 'Conformal_PValue', 'Accepted']]
+                                  'Predicted_Label', 'Conformal_PValue', 'Accepted']]
                 st.sidebar.markdown('''## See your output in the following table:''')
                 st.sidebar.write(output)
                 st.sidebar.markdown(file_download(output, "hepatotoxicity_prediction.csv"), unsafe_allow_html=True)
+ 
 
         except Exception as e:
             st.error(f"⚠️ Failed to process uploaded CSV: {e}")
     else:
         st.warning("⚠️ Please upload a CSV file to continue.")
-
 
 else:
     st.info("ℹ️ Please input or upload SMILES data and Click on 'Predict Drug Induced Hepatotoxicity'.")
