@@ -210,25 +210,25 @@ def remove_salts_and_sanitize(smiles):
         return smiles
     return Chem.MolToSmiles(cleaned_mol)
 
+
+# === Helper function to validate carbon count and molecular weight ===
 from rdkit.Chem import Descriptors
 
-# Filter function to validate carbon count and molecular weight
-def filter_dataframe(df):
-    def is_valid_smiles(smiles):
-        mol = Chem.MolFromSmiles(smiles)
-        if mol is None:
-            return False  # Invalid SMILES
-        
-        num_carbons = sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == 'C')
-        if num_carbons < 4:
-            return False
-        
-        if Descriptors.MolWt(mol) > 909:
-            return False
-        
-        return True
-    
-    return df['smiles'].apply(is_valid_smiles)
+def is_valid_smiles(smiles):
+    mol = Chem.MolFromSmiles(smiles)
+    if mol is None:
+        return False  # Invalid SMILES
+
+    num_carbons = sum(1 for atom in mol.GetAtoms() if atom.GetSymbol() == 'C')
+    if num_carbons < 4:
+        return False
+
+    if Descriptors.MolWt(mol) > 909:
+        return False
+
+    return True
+
+
 
 
 
