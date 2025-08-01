@@ -180,16 +180,20 @@ def remove_solvents(compound_smiles, solvent_mols):
     if not non_solvent_fragments:
         return None
 
-    rwmol = Chem.RWMol(Chem.CombineMols(non_solvent_fragments[0], non_solvent_fragments[0]))
+    # Corrected: Combine all fragments without duplicating
+    combined = non_solvent_fragments[0]
     for frag in non_solvent_fragments[1:]:
-        rwmol = Chem.CombineMols(rwmol, frag)
+        combined = Chem.CombineMols(combined, frag)
 
     try:
-        Chem.SanitizeMol(rwmol)
+        Chem.SanitizeMol(combined)
     except Exception:
         return None
 
-    return Chem.MolToSmiles(rwmol)
+    return Chem.MolToSmiles(combined)
+
+
+
 
 # === Salt Removal and Sanitization ===
 def remove_salts_and_sanitize(smiles):
