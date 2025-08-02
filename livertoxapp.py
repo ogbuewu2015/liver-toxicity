@@ -57,17 +57,22 @@ from kpca_utils_car import split_columns, fit_kernel_pca, transform_with_kernel_
 from kpca_utils_mito import split_columns, fit_kernel_pca, transform_with_kernel_pca, concat_transformed_with_nonfloat
 
 
-with open('car_model.pkl', 'rb') as f:
-    car_model = pickle.load(f)
+# with open('car_model.pkl', 'rb') as f:
+#     car_model = pickle.load(f)
 
-with open('mito_model.pkl', 'rb') as f:
-    mito_model = pickle.load(f)
+# with open('mito_model.pkl', 'rb') as f:
+#     mito_model = pickle.load(f)
 
-with open('calibrated_car_model.pkl', 'rb') as f:
-    cal_car_model = pickle.load(f)
+# with open('calibrated_car_model.pkl', 'rb') as f:
+#     cal_car_model = pickle.load(f)
 
-with open('calibrated_mito_model.pkl', 'rb') as f:
-    cal_mito_model = pickle.load(f)
+# with open('calibrated_mito_model.pkl', 'rb') as f:
+#     cal_mito_model = pickle.load(f)
+    
+car_model =joblib.load('car_model.pkl')
+mito_model =joblib.load('mito_model.pkl')
+cal_car_model =joblib.load('calibrated_car_model.pkl')
+cal_mito_model =joblib.load('calibrated_mito_model.pkl')
 
 
 kpca_model_car = joblib.load("kpca_model_car.pkl")
