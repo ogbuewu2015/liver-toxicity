@@ -562,7 +562,7 @@ if one_or_few_SMILES != "['CCO']":
                         st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
                     if mw > 909:
                         st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
-            st.stop
+            st.stop()
         else:
             st.success("✅ All input compounds have valid carbon count and molecular weight.")
 
@@ -580,7 +580,7 @@ if one_or_few_SMILES != "['CCO']":
         descriptors_df = generate_mold2_descriptors(df['smiles'])
         convert_columns_to_int64(descriptors_df)
         st.success("✅ Mold2 descriptors generated.")
-        st.dataframe(descriptors_df.head())
+        #st.dataframe(descriptors_df.head())
 
         # Step 13: Preprocess for CAR and MITO
         processed_car_df = preprocess_new_data_car(descriptors_df)
@@ -708,7 +708,7 @@ elif predict_button:
                                 st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
                             if mw > 909:
                                 st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
-                    df2 = df2.loc[valid_mask]
+                    st.stop()
                 else:
                     st.success("✅ All uploaded compounds have valid carbon count and molecular weight.")
 
