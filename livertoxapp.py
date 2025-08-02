@@ -562,7 +562,7 @@ if one_or_few_SMILES != "['CCO']":
                         st.error(f"❌ Number of carbons in compound {smi} is less than 4.")
                     if mw > 909:
                         st.error(f"❌ Molecular weight of compound {smi} is greater than 909.")
-            df = df.loc[valid_mask]
+            st.stop
         else:
             st.success("✅ All input compounds have valid carbon count and molecular weight.")
 
