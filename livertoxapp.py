@@ -79,8 +79,7 @@ kpca_model_car = joblib.load("kpca_model_car.pkl")
 kpca_model_mito = joblib.load("kpca_model_mito.pkl")
 
     
-st.write("Gamma from KPCA CAR:", kpca_model_car.gamma)
-st.write("Gamma from KPCA MITO:", kpca_model_mito.gamma)
+
 
 
 
