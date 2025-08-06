@@ -618,8 +618,8 @@ if one_or_few_SMILES != "['CCO']":
         st.success("✅ Cytotoxicity data aligned with hepatotoxic data using kernel PCA.")
 
         # Step 17: Weighted predictions
-        calibrate_mito_data = pd.read_csv(X_DILI_calibrate_mito)
-        calibrate_car_data = pd.read_csv(X_DILI_calibrate_car)
+        calibrate_mito_data = pd.read_csv("X_DILI_calibrate_mito.csv")
+        calibrate_car_data = pd.read_csv("X_DILI_calibrate_car.csv")
 
         weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(
             cal_mito_model, cal_car_model,
