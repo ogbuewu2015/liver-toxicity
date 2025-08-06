@@ -78,7 +78,6 @@ cal_mito_model =joblib.load('calibrated_mito_model.pkl')
 kpca_model_car = joblib.load("kpca_model_car.pkl")
 kpca_model_mito = joblib.load("kpca_model_mito.pkl")
 
-    
 
 
 
@@ -625,12 +624,12 @@ if one_or_few_SMILES != "['CCO']":
         weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(
             cal_mito_model, cal_car_model,
             calibrate_mito_data, calibrate_car_data,
-            logloss_mito=0.297667, logloss_car=0.443863
+            logloss_mito=0.293462, logloss_car=0.443863
         )
         weighted_test_proba, weighted_test_pred, weights = get_weighted_predictions(
             cal_mito_model, cal_car_model,
             selected_mito_data, selected_car_data,
-            logloss_mito=0.297667, logloss_car=0.443863
+            logloss_mito=0.293462, logloss_car=0.443863
         )
 
         df['Weighted_Toxicity_Probability'] = weighted_test_proba
@@ -770,12 +769,12 @@ elif predict_button:
                 weighted_calibrate_proba, weighted_calibrate_pred, _ = get_weighted_predictions(
                     cal_mito_model, cal_car_model,
                     calibrate_mito_data, calibrate_car_data,
-                    logloss_mito=0.297667, logloss_car=0.443863
+                    logloss_mito=0.293462, logloss_car=0.443863
                 )
                 weighted_test_proba, weighted_test_pred, weights = get_weighted_predictions(
                     cal_mito_model, cal_car_model,
                     selected_mito_data, selected_car_data,
-                    logloss_mito=0.297667, logloss_car=0.443863
+                    logloss_mito=0.293462, logloss_car=0.443863
                 )
 
                 df2['Weighted_Toxicity_Probability'] = weighted_test_proba

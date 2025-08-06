@@ -17,7 +17,7 @@ def split_columns(df):
     non_float_cols = df.select_dtypes(exclude=['float64', 'float32']).columns
     return df[float_cols], df[non_float_cols]
 
-def fit_kernel_pca(float_df, n_components=85, kernel='rbf', **kwargs):
+def fit_kernel_pca(float_df, n_components=100, kernel='rbf', **kwargs):
     kpca = PatchedKernelPCA(n_components=n_components, kernel=kernel, **kwargs)
     transformed = kpca.fit_transform(float_df)
     return kpca, transformed
